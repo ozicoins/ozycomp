@@ -1,0 +1,955 @@
+/**
+ * Copyright (c) 2014 The xterm.js authors. All rights reserved.
+ * Copyright (c) 2012-2013, Christopher Jeffrey (MIT License)
+ * https://github.com/chjj/term.js
+ * @license MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * Originally forked from (with the author's permission):
+ *   Fabrice Bellard's javascript vt100 for jslinux:
+ *   http://bellard.org/jslinux/
+ *   Copyright (c) 2011 Fabrice Bellard
+ *   The original design remains. The terminal itself
+ *   has been extended to include xterm CSI codes, among
+ *   other features.
+ */
+
+/**
+ *  Default styles for xterm.js
+ */
+
+.xterm {
+    cursor: text;
+    position: relative;
+    user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+}
+
+.xterm.focus,
+.xterm:focus {
+    outline: none;
+}
+
+.xterm .xterm-helpers {
+    position: absolute;
+    top: 0;
+    /**
+     * The z-index of the helpers must be higher than the canvases in order for
+     * IMEs to appear on top.
+     */
+    z-index: 5;
+}
+
+.xterm .xterm-helper-textarea {
+    padding: 0;
+    border: 0;
+    margin: 0;
+    /* Move textarea out of the screen to the far left, so that the cursor is not visible */
+    position: absolute;
+    opacity: 0;
+    left: -9999em;
+    top: 0;
+    width: 0;
+    height: 0;
+    z-index: -5;
+    /** Prevent wrapping so the IME appears against the textarea at the correct position */
+    white-space: nowrap;
+    overflow: hidden;
+    resize: none;
+}
+
+.xterm .composition-view {
+    /* TODO: Composition position got messed up somewhere */
+    background: #000;
+    color: #FFF;
+    display: none;
+    position: absolute;
+    white-space: nowrap;
+    z-index: 1;
+}
+
+.xterm .composition-view.active {
+    display: block;
+}
+
+.xterm .xterm-viewport {
+    /* On OS X this is required in order for the scroll bar to appear fully opaque */
+    background-color: #000;
+    overflow-y: scroll;
+    cursor: default;
+    position: absolute;
+    right: 0;
+    left: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.xterm .xterm-screen {
+    position: relative;
+}
+
+.xterm .xterm-screen canvas {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.xterm .xterm-scroll-area {
+    visibility: hidden;
+}
+
+.xterm-char-measure-element {
+    display: inline-block;
+    visibility: hidden;
+    position: absolute;
+    top: 0;
+    left: -9999em;
+    line-height: normal;
+}
+
+.xterm.enable-mouse-events {
+    /* When mouse events are enabled (eg. tmux), revert to the standard pointer cursor */
+    cursor: default;
+}
+
+.xterm.xterm-cursor-pointer,
+.xterm .xterm-cursor-pointer {
+    cursor: pointer;
+}
+
+.xterm.column-select.focus {
+    /* Column selection mode */
+    cursor: crosshair;
+}
+
+.xterm .xterm-accessibility:not(.debug),
+.xterm .xterm-message {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 10;
+    color: transparent;
+    pointer-events: none;
+}
+
+.xterm .xterm-accessibility-tree:not(.debug) *::selection {
+  color: transparent;
+}
+
+.xterm .xterm-accessibility-tree {
+  user-select: text;
+  white-space: pre;
+}
+
+.xterm .live-region {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.xterm-dim {
+    /* Dim should not apply to background, so the opacity of the foreground color is applied
+     * explicitly in the generated class and reset to 1 here */
+    opacity: 1 !important;
+}
+
+.xterm-underline-1 { text-decoration: underline; }
+.xterm-underline-2 { text-decoration: double underline; }
+.xterm-underline-3 { text-decoration: wavy underline; }
+.xterm-underline-4 { text-decoration: dotted underline; }
+.xterm-underline-5 { text-decoration: dashed underline; }
+
+.xterm-overline {
+    text-decoration: overline;
+}
+
+.xterm-overline.xterm-underline-1 { text-decoration: overline underline; }
+.xterm-overline.xterm-underline-2 { text-decoration: overline double underline; }
+.xterm-overline.xterm-underline-3 { text-decoration: overline wavy underline; }
+.xterm-overline.xterm-underline-4 { text-decoration: overline dotted underline; }
+.xterm-overline.xterm-underline-5 { text-decoration: overline dashed underline; }
+
+.xterm-strikethrough {
+    text-decoration: line-through;
+}
+
+.xterm-screen .xterm-decoration-container .xterm-decoration {
+	z-index: 6;
+	position: absolute;
+}
+
+.xterm-screen .xterm-decoration-container .xterm-decoration.xterm-decoration-top-layer {
+	z-index: 7;
+}
+
+.xterm-decoration-overview-ruler {
+    z-index: 8;
+    position: absolute;
+    top: 0;
+    right: 0;
+    pointer-events: none;
+}
+
+.xterm-decoration-top {
+    z-index: 2;
+    position: relative;
+}
+/* The Halloween corner of a queue input area (SeasonCorner.tsx).
+   It lies over the input area's root and changes no layout. Nothing in it
+   takes the pointer but the pumpkin's drawn shape. Every animation moves only
+   transform or opacity. The one loop that can run for long is the dozing
+   glow, and it stops with the window (data-cth-window) and with reduced
+   motion. */
+
+.cth-sc {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+/* Arabic: the corner sits at the end of the line, the art mirrored. */
+:root[dir='rtl'] .cth-sc { transform: scaleX(-1); }
+
+/* ── cobweb and spider: the top corner, drawn over the text ────────────── */
+/* Round 7, R7-2b (founder: "the cobweb should be small before and more web
+   grows out as we hover and spider drops"): at rest the web is the small
+   light one, 56 px (WEB_PX), the piece's own ink-500 strands at 0.55. A
+   pointer on it grows it 1.5 times out of the corner (WEB_GROWN_PX, a
+   transform: the box never changes) and its strands gain contrast: ink-700,
+   a darker ink than rest in the light themes, a lighter one in the dark
+   themes. The growth and the opacity move; the ink swaps. It goes back with
+   the spider's climb (data-web, SeasonCorner.tsx). */
+.cth-sc-web {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  opacity: 0.55;
+  transform-origin: 100% 0;
+  /* This transition plays on the way back (R7-4, founder: "the spider web
+     should go back a bit quickly"): shorter than the way out, which the
+     grown rule carries. */
+  transition: opacity 0.25s ease-in, transform 0.25s ease-in;
+}
+.cth-sc-web > svg { display: block; }
+/* The web steps back while the draft has text under it, or messages are queued. */
+.cth-sc[data-web='faded'] .cth-sc-web { opacity: 0.25; }
+.cth-sc[data-web='grown'] .cth-sc-web { transform: scale(1.5); opacity: 0.85; transition: opacity 0.4s ease, transform 0.4s ease-out; }
+.cth-sc[data-web='grown'] .cth-pc-web g { stroke: var(--cth-ink-700); }
+
+/* The spider's own box: the grown web's size, never scaled, clipped so an
+   up spider is out of sight. */
+.cth-sc-drop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 84px;
+  height: 84px;
+  overflow: hidden;
+}
+
+/* The spider is up in the corner until the pointer is on the web
+   (data-spider='down', SeasonCorner.tsx). Up is the base state, so the
+   first paint never shows it rising. Up: fast, the way a startled spider
+   goes. */
+.cth-sc-spider {
+  position: absolute;
+  top: 0;
+  right: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateY(-44px);
+  transition: transform 0.18s ease-in;
+}
+.cth-sc-thread { width: 1px; height: 26px; background: var(--cth-ink-500); }
+.cth-sc-spiderbody svg { display: block; }
+/* Down: slow, with one small bounce at the end of the thread. */
+.cth-sc[data-spider='down'] .cth-sc-spider {
+  transform: translateY(0);
+  transition: transform 1.1s cubic-bezier(0.3, 1.45, 0.5, 1);
+}
+.cth-sc[data-hover='on'] .cth-sc-spiderbody { animation: cth-sc-wiggle 0.5s ease-in-out 2; }
+@keyframes cth-sc-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-16deg); }
+  75%      { transform: rotate(16deg); }
+}
+
+/* ── pumpkin: resting on the top edge, above the web ───────────────────── */
+/* Its base sits on the root's 1 px top border and no body is in the box
+   (founder, 30 Sep 2026). The body is drawn to 40 of 42 units, so the drawn
+   base is 1 px above the element's bottom: a 2 px sink lands it on the line.
+   The offset follows the height, so another size cannot hang inside again. */
+.cth-sc-pumpkin {
+  position: absolute;
+  top: calc(var(--cth-sc-sink, 2px) - var(--cth-sc-h, 22px));
+  right: 20px;
+  width: var(--cth-sc-w, 25px);
+  height: var(--cth-sc-h, 22px);
+}
+.cth-sc-lean {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  transition: transform 0.3s ease;
+}
+.cth-sc-layer { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cth-sc-hit { pointer-events: auto; cursor: pointer; }
+
+/* Faces: only the one that matches the mood is shown. */
+.cth-sc-face { opacity: 0; transition: opacity 0.3s ease; }
+.cth-sc[data-mood='awake'] .cth-sc-face-awake,
+.cth-sc[data-mood='dozing'] .cth-sc-face-dozing,
+.cth-sc[data-mood='surprised'] .cth-sc-face-surprised,
+.cth-sc[data-mood='listening'] .cth-sc-face-listening,
+.cth-sc[data-mood='out'] .cth-sc-face-out { opacity: 1; }
+
+/* The candle. Two boxes: the outer one holds the level (how much context is
+   left, written by the component), the inner one holds the mood's own light. */
+.cth-sc-level { position: absolute; inset: -9px; transition: opacity 0.8s ease; }
+.cth-sc-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, var(--cth-season-glow), transparent);
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+.cth-sc[data-mood='dozing'] .cth-sc-glow { animation: cth-sc-doze 5.5s ease-in-out infinite; }
+.cth-sc[data-mood='out'] .cth-sc-glow { opacity: 0; }
+@keyframes cth-sc-doze {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 0.75; }
+}
+
+/* Needs you: one start, then still. */
+.cth-sc[data-mood='surprised'] .cth-sc-lean { animation: cth-sc-start 0.45s ease-out 1; }
+@keyframes cth-sc-start {
+  0%   { transform: translateY(0) scale(1); }
+  35%  { transform: translateY(-5px) scale(1.08); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Dictation: it leans toward the text and listens; the candle pulses while
+   the words are on their way. */
+.cth-sc[data-mood='listening'] .cth-sc-lean { transform: rotate(-8deg); }
+.cth-sc[data-dictation='transcribing'] .cth-sc-glow { animation: cth-sc-pulse 1.1s ease-in-out infinite; }
+@keyframes cth-sc-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+
+/* Click: a wink and one hop. */
+.cth-sc-wink { opacity: 0; }
+.cth-sc-hop { animation: cth-sc-hop 0.5s ease-out 1; }
+.cth-sc-hop .cth-sc-wink { animation: cth-sc-wink 0.5s linear 1; }
+@keyframes cth-sc-hop {
+  0%, 100% { transform: translateY(0); }
+  40%      { transform: translateY(-7px); }
+  70%      { transform: translateY(0); }
+  85%      { transform: translateY(-2px); }
+}
+@keyframes cth-sc-wink {
+  0%, 100% { opacity: 0; }
+  15%, 80% { opacity: 1; }
+}
+
+/* A compact just ended: the candle is lit again. */
+.cth-sc-flare .cth-sc-level { animation: cth-sc-flare 0.9s ease-out 1; }
+@keyframes cth-sc-flare {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.7); }
+  100% { transform: scale(1); }
+}
+
+/* ── ghost mail: leaves from the send button's corner ──────────────────── */
+.cth-sc-ghost {
+  position: absolute;
+  right: 40px;
+  bottom: 30px;
+  opacity: 0;
+}
+.cth-sc-ghost svg { display: block; }
+.cth-sc-go { animation: cth-sc-mail 0.9s ease-out 1; }
+@keyframes cth-sc-mail {
+  0%   { transform: translate(0, 6px) scale(0.6); opacity: 0; }
+  18%  { transform: translate(0, -4px) scale(1); opacity: 1; }
+  60%  { transform: translate(5px, -30px) scale(1); opacity: 0.9; }
+  100% { transform: translate(-3px, -54px) scale(0.92); opacity: 0; }
+}
+
+/* The window is off screen: nothing runs. */
+:root[data-cth-window='hidden'] .cth-sc * { animation-play-state: paused !important; }
+
+/* Reduced motion: every piece is still and the moods change by a plain swap.
+   The ghost is never started (SeasonCorner.tsx). The spider is shown or
+   hidden with no travel: up is hidden, and a pointer on the web shows it
+   where it hangs. It is never held down: held down it would sit on "Clear
+   all" and on the queue note while messages are queued. */
+@media (prefers-reduced-motion: reduce) {
+  .cth-sc *, .cth-sc-hop, .cth-sc-go { animation: none !important; transition: none !important; }
+  .cth-sc[data-spider='up'] .cth-sc-spider { opacity: 0; }
+  .cth-sc[data-mood='listening'] .cth-sc-lean { transform: none; }
+  .cth-sc[data-mood='dozing'] .cth-sc-glow { opacity: 0.55; }
+}
+/* The paywall's tour and its bottom section (PaywallTour.tsx, Paywall.tsx).
+   Tokens only: no literal colour anywhere in this file. Every border is 1px
+   and even. Every animation runs a fixed number of times, so a wall left
+   open comes to rest; reduced motion stops all of them and every scene is
+   drawn finished by the component. Under 980 px the two halves stack. */
+
+/* ── the two halves ───────────────────────────────────────────────────── */
+/* THE HEIGHT IS SET HERE, once. The list and the miniature share it, so the
+   wall is the same height on every step and in every language: nothing a
+   scene or a sentence does can move what is below. The app's window is never
+   smaller than 1280 by 800, and the card this makes fits it. */
+.cth-pw-body { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; height: 490px; }
+
+/* ── the list: ten equal rows that share the height ───────────────────── */
+.cth-pw-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; min-width: 0; min-height: 0; }
+.cth-pw-list li { flex: 1 1 auto; display: flex; min-height: 0; }
+.cth-pw-row {
+  position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; align-items: center; align-content: center;
+  width: 100%; padding: 4px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent;
+  color: inherit; font: inherit; text-align: start; cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.cth-pw-row:hover { background: var(--cth-cream-200); }
+.cth-pw-row:focus-visible { outline: 2px solid var(--cth-focus-ring); outline-offset: 2px; }
+.cth-pw-gi {
+  width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--cth-cream-200); color: var(--cth-ink-500); transition: background 0.2s, color 0.2s;
+}
+.cth-pw-row > b { font-size: 13.5px; font-weight: 500; line-height: 19px; color: var(--cth-ink-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Every sentence is in the page, folded in its row: it is the row's spoken
+   text. The eye reads the open one in the caption under the miniature. */
+.cth-pw-ds { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* The open row is a padded card. The rows share what is left, so the list
+   is the same height whichever one is open. */
+.cth-pw-row[aria-current] { background: var(--cth-accent-soft); border-color: var(--cth-accent-line); padding: 10px 14px; }
+.cth-pw-row[aria-current] .cth-pw-gi { background: var(--cth-accent); color: var(--cth-accent-ink); }
+.cth-pw-row[aria-current] > b { font-weight: 600; color: var(--cth-ink-900); }
+/* New this release and PRO only. */
+.cth-pw-new {
+  display: inline-flex; align-items: center; height: 16px; padding: 0 5px; margin-inline-start: 6px; border-radius: 5px;
+  font: 600 9.5px var(--cth-font-mono); letter-spacing: 0.04em; vertical-align: 1px;
+  background: var(--cth-accent); color: var(--cth-accent-ink);
+}
+/* How long the tour rests on this step: a line that fills by transform. */
+.cth-pw-prog {
+  position: absolute; inset-inline: 14px; bottom: -1px; height: 2px; border-radius: 2px; opacity: 0.45;
+  background: var(--cth-accent-text); transform-origin: 0 50%; transform: scaleX(0);
+  animation: cth-pw-prog linear 1 both;
+}
+:root[dir='rtl'] .cth-pw-prog { transform-origin: 100% 50%; }
+@keyframes cth-pw-prog { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+
+/* ── the miniature PRO desk ───────────────────────────────────────────── */
+/* The desk takes what the caption and the trail leave of the column, and
+   every scene fills its pane. */
+.cth-pw-rcol { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.cth-pw-desk {
+  position: relative; flex: 1 1 0; min-height: 0; display: grid; grid-template-rows: 26px minmax(0, 1fr);
+  border: 1px solid var(--cth-ink-300); border-radius: 12px; overflow: hidden;
+  background: var(--cth-cream-50); font-size: 12px; line-height: 1.45;
+}
+.cth-pw-desk small { display: block; }
+.cth-pw-muted { color: var(--cth-ink-500); }
+.cth-pw-end { margin-inline-start: auto; display: inline-flex; align-items: center; }
+.cth-pw-face { display: inline-flex; flex-shrink: 0; }
+.cth-pw-cd { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+.cth-pw-tb {
+  display: flex; align-items: center; gap: 8px; padding: 0 10px; border-bottom: 1px solid var(--cth-ink-300);
+  font-size: 10px; color: var(--cth-ink-500);
+}
+.cth-pw-conn { display: inline-flex; align-items: center; gap: 4px; }
+.cth-pw-conn::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--cth-dot-working); }
+.cth-pw-sw { margin-inline-start: auto; display: inline-flex; border: 1px solid var(--cth-ink-300); border-radius: 6px; overflow: hidden; font-size: 9.5px; font-weight: 600; }
+.cth-pw-sw i { font-style: normal; padding: 1px 6px; }
+.cth-pw-sw i[data-on] { background: var(--cth-accent); color: var(--cth-accent-ink); }
+
+.cth-pw-in { display: grid; grid-template-columns: 136px minmax(0, 1fr); min-height: 0; }
+
+/* the sidebar: names and live dots only */
+.cth-pw-side {
+  position: relative; display: flex; flex-direction: column; gap: 1px; padding: 8px 6px; min-width: 0; min-height: 0; overflow: hidden;
+  background: var(--cth-paper-100); border-inline-end: 1px solid var(--cth-ink-300);
+}
+.cth-pw-org { display: flex; align-items: center; gap: 7px; padding: 2px 6px 8px; font-weight: 600; font-size: 11.5px; white-space: nowrap; }
+.cth-pw-nav {
+  display: flex; align-items: center; gap: 7px; height: 22px; flex: none; padding: 0 6px; border-radius: 6px; white-space: nowrap;
+  color: var(--cth-ink-700); font-size: 11px; transition: background 0.3s, color 0.3s;
+}
+.cth-pw-nav[data-on], .cth-pw-ag[data-on] { background: var(--cth-cream-200); color: var(--cth-ink-900); }
+.cth-pw-nav[data-on] { font-weight: 500; }
+.cth-pw-lbl { font: 500 9px/1 var(--cth-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--cth-ink-500); padding: 9px 6px 5px; }
+.cth-pw-ag { display: flex; align-items: center; gap: 6px; flex: none; padding: 2px 6px; border-radius: 6px; font-size: 10.5px; white-space: nowrap; transition: background 0.3s; }
+.cth-pw-ag .cth-pw-dot { margin-inline-start: auto; }
+.cth-pw-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--cth-dot-idle); }
+.cth-pw-dot[data-live] { background: var(--cth-dot-working); }
+.cth-pw-side::after {
+  content: ''; position: absolute; inset-inline: 0; bottom: 0; height: 16px; pointer-events: none;
+  background: linear-gradient(transparent, var(--cth-paper-100));
+}
+
+/* the screen */
+.cth-pw-pane { position: relative; min-width: 0; overflow: hidden; }
+.cth-pw-scr {
+  position: absolute; inset: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;
+  animation: cth-pw-arrive 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1 both;
+}
+@keyframes cth-pw-arrive { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } }
+.cth-pw-fill { flex: 1; min-height: 0; }
+.cth-pw-h { display: flex; align-items: center; gap: 8px; flex: none; min-height: 22px; white-space: nowrap; }
+.cth-pw-h > b { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.cth-pw-h .cth-pw-muted { display: inline-flex; align-items: center; font-size: 11px; }
+.cth-pw-hr { margin-inline-start: auto; display: flex; align-items: center; gap: 6px; }
+/* A card in the picture, and the pieces most scenes share. */
+.cth-pw-card {
+  display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; padding: 11px 12px;
+  background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); border-radius: 10px;
+  transition: border-color 0.3s, background 0.3s;
+}
+.cth-pw-who { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.cth-pw-who b { font-size: 12.5px; font-weight: 600; }
+.cth-pw-line { font-size: 12px; line-height: 1.45; color: var(--cth-ink-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cth-pw-k { font-size: 11px; color: var(--cth-ink-500); }
+.cth-pw-bar { display: block; flex: none; height: 5px; border-radius: 3px; background: var(--cth-cream-200); overflow: hidden; }
+.cth-pw-bar i { display: block; height: 100%; border-radius: 3px; background: var(--cth-sky); transform-origin: 0 50%; transition: transform 1.4s cubic-bezier(0.3, 0.7, 0.3, 1); }
+.cth-pw-bar[data-tone='accent'] i { background: var(--cth-accent-text); }
+.cth-pw-bar[data-tone='ok'] i { background: var(--cth-status-working); }
+:root[dir='rtl'] .cth-pw-bar i { transform-origin: 100% 50%; }
+/* A terminal follows the theme, as PRO's own does: a paper block in light,
+   a dark block in dark. It reads left to right in every language. Every
+   line has its place from the start; the ones that have arrived are shown. */
+.cth-pw-term {
+  flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden;
+  padding: 4px 10px; border: 1px solid var(--cth-ink-300); border-radius: 8px; background: var(--cth-paper-200);
+  font: 10.5px/15px var(--cth-font-mono); color: var(--cth-ink-900); white-space: pre; direction: ltr; text-align: left;
+}
+.cth-pw-term div { flex: none; overflow: hidden; text-overflow: ellipsis; opacity: 0; transform: translateY(3px); transition: opacity 0.3s, transform 0.3s; }
+.cth-pw-term div[data-in] { opacity: 1; transform: translateY(0); }
+.cth-pw-term div[data-tone='quiet'] { color: var(--cth-ink-500); }
+.cth-pw-term div[data-tone='ok'] { color: var(--cth-status-working); }
+.cth-pw-term div[data-tone='warn'] { color: var(--cth-status-waiting); }
+
+/* Agents */
+.cth-pw-g4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+/* The orchestrator: work leaves him and lands on an agent */
+.cth-pw-route { position: relative; overflow: hidden; background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); border-radius: 12px; }
+.cth-pw-route svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cth-pw-route line { stroke: var(--cth-connector); stroke-width: 1; stroke-dasharray: 3 4; }
+.cth-pw-node {
+  position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px; padding: 7px 10px; white-space: nowrap;
+  background: var(--cth-cream-50); border: 1px solid var(--cth-ink-300); border-radius: 12px;
+}
+.cth-pw-node b { font-size: 12px; font-weight: 600; }
+.cth-pw-node[data-boss] { flex-direction: column; gap: 5px; padding: 12px 16px; border-color: var(--cth-accent-line); background: var(--cth-accent-soft); }
+.cth-pw-got { display: inline-flex; opacity: 0; transition: opacity 0.3s; }
+.cth-pw-got[data-on] { opacity: 1; }
+/* The ticket in flight: it appears on him, crosses, and is gone as it lands. */
+.cth-pw-env {
+  position: absolute; z-index: 2; padding: 3px 7px; border-radius: 6px; font: 600 10px var(--cth-font-mono);
+  background: var(--cth-accent); color: var(--cth-accent-ink); box-shadow: var(--cth-shadow-hard);
+  opacity: 0; transform: translate(-50%, -50%) scale(0.6);
+  transition: inset-inline-start 0.9s cubic-bezier(0.5, 0, 0.3, 1), top 0.9s cubic-bezier(0.5, 0, 0.3, 1), opacity 0.25s, transform 0.25s;
+}
+.cth-pw-env[data-go] { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* Right to left the picture mirrors: he sits on the right and sends leftward. */
+:root[dir='rtl'] .cth-pw-route svg { transform: scaleX(-1); }
+:root[dir='rtl'] .cth-pw-node { transform: translate(50%, -50%); }
+:root[dir='rtl'] .cth-pw-env { transform: translate(50%, -50%) scale(0.6); }
+:root[dir='rtl'] .cth-pw-env[data-go] { transform: translate(50%, -50%) scale(1); }
+.cth-pw-cap { flex: none; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; align-items: center; }
+.cth-pw-cap .cth-pw-bar { grid-column: 1 / -1; }
+
+/* Tasks */
+.cth-pw-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cth-pw-bcol { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; overflow: hidden; padding: 8px; border-radius: 10px; background: var(--cth-cream-200); }
+.cth-pw-bh { display: flex; align-items: center; gap: 6px; flex: none; padding: 2px 2px 0; font: 500 10px var(--cth-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--cth-ink-500); white-space: nowrap; }
+.cth-pw-bh i { width: 6px; height: 6px; border-radius: 50%; background: var(--cth-status-idle); }
+.cth-pw-bcol[data-col='todo'] .cth-pw-bh i { background: var(--cth-sky); }
+.cth-pw-bcol[data-col='doing'] .cth-pw-bh i { background: var(--cth-status-working); }
+.cth-pw-tk { display: flex; flex-direction: column; gap: 6px; flex: none; padding: 9px 10px; background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); border-radius: 9px; }
+.cth-pw-tk[data-lands] { animation: cth-pw-land 0.7s cubic-bezier(0.3, 1.3, 0.5, 1) 1 both; }
+@keyframes cth-pw-land { 0% { opacity: 0; transform: translateY(-14px) scale(0.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+.cth-pw-id { font: 10.5px var(--cth-font-mono); color: var(--cth-ink-500); }
+.cth-pw-tt { font-size: 12px; font-weight: 500; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cth-pw-tft { display: flex; align-items: center; min-height: 20px; }
+
+/* Inbox */
+.cth-pw-ibx { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 12px; }
+.cth-pw-ibl { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cth-pw-irow { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 7px 8px; border-radius: 8px; font-size: 12px; }
+.cth-pw-irow > svg { flex: none; color: var(--cth-ink-500); }
+.cth-pw-irow > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cth-pw-irow[data-on] { background: var(--cth-cream-200); font-weight: 600; }
+.cth-pw-irow em { margin-inline-start: auto; padding: 1px 5px; border-radius: 5px; font: 600 10px var(--cth-font-mono); background: var(--cth-accent); color: var(--cth-accent-ink); }
+.cth-pw-q { font-size: 14px; font-weight: 600; line-height: 1.35; }
+/* Two files side by side: a picture, laid out the same in every language. */
+.cth-pw-logos { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; direction: ltr; }
+.cth-pw-logo {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 0;
+  border: 1px solid var(--cth-ink-300); border-radius: 10px; background: var(--cth-cream-50);
+  font: 11px var(--cth-font-mono); color: var(--cth-ink-500); transition: border-color 0.3s, background 0.3s, transform 0.3s;
+}
+.cth-pw-logo[data-pick] { border-color: var(--cth-accent-text); background: var(--cth-accent-soft); transform: scale(1.03); }
+.cth-pw-mk { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font: 800 20px var(--cth-font-ui); background: var(--cth-accent); color: var(--cth-accent-ink); }
+.cth-pw-mk[data-old] { background: var(--cth-cream-300); color: var(--cth-ink-700); }
+.cth-pw-ans { align-self: flex-start; display: inline-flex; opacity: 0; transform: translateY(4px); transition: opacity 0.3s, transform 0.3s; }
+.cth-pw-ans[data-on] { opacity: 1; transform: translateY(0); }
+
+/* Automations: a clock that reaches the hour, and the triage runs */
+.cth-pw-auto { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 12px; }
+.cth-pw-clock { align-items: center; justify-content: center; gap: 10px; }
+.cth-pw-clock svg { width: 132px; height: 132px; }
+.cth-pw-cf { fill: var(--cth-cream-50); stroke: var(--cth-ink-300); }
+.cth-pw-tick { stroke: var(--cth-ink-300); stroke-width: 1.5; }
+.cth-pw-hand { stroke: var(--cth-ink-900); stroke-width: 2.2; stroke-linecap: round; transform-origin: 60px 60px; transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1); }
+.cth-pw-hand[data-hour] { stroke-width: 3.5; }
+.cth-pw-pin { fill: var(--cth-accent-text); }
+.cth-pw-clock time { font: 600 13px var(--cth-font-mono); direction: ltr; }
+.cth-pw-rows { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+.cth-pw-arow { flex: 1; flex-direction: row; align-items: center; gap: 10px; }
+.cth-pw-arow[data-ran] { border-color: var(--cth-status-working); background: var(--cth-status-working-tint); }
+.cth-pw-ib { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; background: var(--cth-cream-200); color: var(--cth-ink-700); }
+.cth-pw-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.cth-pw-tx b { max-width: 100%; font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cth-pw-tx small { font-size: 11px; line-height: 18px; color: var(--cth-ink-500); }
+.cth-pw-tog { position: relative; width: 28px; height: 16px; border-radius: 999px; flex: none; background: var(--cth-cream-300); border: 1px solid var(--cth-ink-300); box-sizing: border-box; transition: background 0.3s, border-color 0.3s; }
+.cth-pw-tog::after {
+  content: ''; position: absolute; top: 1px; inset-inline-start: 1px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); box-sizing: border-box; transition: transform 0.3s;
+}
+.cth-pw-tog[data-on] { background: var(--cth-status-working); border-color: var(--cth-status-working); }
+.cth-pw-tog[data-on]::after { transform: translateX(12px); border-color: transparent; }
+:root[dir='rtl'] .cth-pw-tog[data-on]::after { transform: translateX(-12px); }
+
+/* Memory */
+.cth-pw-srch { display: flex; align-items: center; gap: 7px; min-width: 240px; padding: 5px 10px; border: 1px solid var(--cth-ink-300); border-radius: 8px; background: var(--cth-cream-100); font-size: 12px; direction: ltr; }
+.cth-pw-caret { width: 1px; height: 12px; background: var(--cth-ink-900); animation: cth-pw-blink 1s steps(1) 8; }
+@keyframes cth-pw-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+.cth-pw-mem { display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 10px; }
+.cth-pw-graph { position: relative; overflow: hidden; direction: ltr; background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); border-radius: 10px; }
+.cth-pw-graph svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cth-pw-graph line { stroke: var(--cth-connector); stroke-width: 1; }
+.cth-pw-n {
+  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box;
+  border: 1px solid var(--cth-accent-text); background: var(--cth-cream-100); transition: opacity 0.4s;
+}
+.cth-pw-n[data-kind='ticket'] { border-radius: 3px; border-color: var(--cth-status-working); }
+.cth-pw-n[data-kind='agent'] { width: 34px; height: 34px; margin: -17px 0 0 -17px; display: grid; place-items: center; border-color: var(--cth-sky); }
+.cth-pw-graph[data-q] .cth-pw-n[data-dim] { opacity: 0.22; }
+.cth-pw-res { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+.cth-pw-rc { flex: 1; align-items: flex-start; justify-content: center; gap: 5px; padding: 10px; opacity: 0; transform: translateX(6px); transition: opacity 0.35s, transform 0.35s; }
+.cth-pw-rc[data-in] { opacity: 1; transform: translateX(0); }
+.cth-pw-rc b { font-size: 12px; font-weight: 600; line-height: 1.35; }
+
+/* Agent rooms: a queue beside a live terminal */
+.cth-pw-room { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 12px; }
+.cth-pw-room .cth-pw-term { justify-content: flex-start; padding: 10px 12px; font-size: 11px; }
+.cth-pw-queue { display: flex; flex-direction: column; gap: 6px; }
+/* A queued item is one height, so moving it a place is one row and its gap. */
+.cth-pw-qi {
+  position: relative; display: flex; align-items: center; gap: 8px; height: 32px; box-sizing: border-box; padding: 0 9px; overflow: hidden;
+  border: 1px solid var(--cth-ink-300); border-radius: 8px; background: var(--cth-cream-50); font-size: 11.5px; white-space: nowrap;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s, box-shadow 0.3s;
+}
+.cth-pw-qi[data-move='up'] { transform: translateY(-38px); }
+.cth-pw-qi[data-move='down'] { transform: translateY(38px); }
+.cth-pw-qi[data-lift] { z-index: 1; border-color: var(--cth-accent-text); box-shadow: var(--cth-shadow-hard); }
+.cth-pw-last { margin-top: auto; }
+
+/* Capabilities: a bundle is picked and lands on an agent */
+.cth-pw-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cth-pw-tile { justify-content: center; transition: border-color 0.3s, background 0.3s, transform 0.3s; }
+.cth-pw-tile[data-pick] { border-color: var(--cth-accent-text); background: var(--cth-accent-soft); transform: scale(1.02); }
+.cth-pw-tn { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.cth-pw-tn b { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The servers a bundle carries: names from the app's catalog, left to right. */
+.cth-pw-gl { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; direction: ltr; }
+.cth-pw-gl span {
+  padding: 1px 6px; border: 1px solid var(--cth-ink-300); border-radius: 5px; background: var(--cth-cream-50);
+  font: 10px var(--cth-font-mono); color: var(--cth-ink-500); white-space: nowrap;
+}
+.cth-pw-grant { flex: none; flex-direction: row; align-items: center; gap: 10px; }
+.cth-pw-grant > b { font-size: 12.5px; font-weight: 600; }
+.cth-pw-gl span[data-got] { border-color: var(--cth-status-working); color: var(--cth-status-working); opacity: 0; transform: scale(0.6); transition: opacity 0.3s, transform 0.3s; }
+.cth-pw-gl span[data-got][data-on] { opacity: 1; transform: scale(1); }
+
+/* Temps: hired for one job, timed, then gone */
+.cth-pw-temps { display: flex; flex-direction: column; gap: 8px; }
+.cth-pw-trow { flex: 1; flex-direction: row; align-items: center; gap: 12px; transition: opacity 0.5s, transform 0.5s; }
+.cth-pw-trow .cth-pw-tx { align-items: stretch; gap: 6px; }
+.cth-pw-trow small { min-width: 34px; text-align: end; font: 10.5px var(--cth-font-mono); color: var(--cth-ink-500); }
+.cth-pw-trow[data-out] { opacity: 0; transform: translateY(-10px); }
+.cth-pw-trow[data-gone] { opacity: 0.4; }
+
+/* ── the Stapler, over another app ────────────────────────────────────── */
+/* It covers the whole desk under the title bar, sidebar too. The picture is
+   laid out left to right in every language: it is somebody's browser. */
+.cth-pw-over {
+  position: absolute; inset: 26px 0 0 0; z-index: 4; padding: 12px; direction: ltr;
+  background: var(--cth-cream-50); animation: cth-pw-arrive 0.4s ease 1 both;
+}
+.cth-pw-other { height: 100%; display: grid; grid-template-rows: 24px minmax(0, 1fr); overflow: hidden; background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); border-radius: 10px; }
+.cth-pw-obar { display: flex; align-items: center; gap: 6px; padding: 0 8px; border-bottom: 1px solid var(--cth-ink-300); background: var(--cth-paper-200); font: 10px var(--cth-font-mono); color: var(--cth-ink-500); }
+.cth-pw-obar i { width: 7px; height: 7px; border-radius: 50%; background: var(--cth-ink-300); }
+.cth-pw-obar span { margin-left: 8px; padding: 1px 8px; border: 1px solid var(--cth-ink-300); border-radius: 5px; background: var(--cth-cream-100); }
+.cth-pw-pg { padding: 16px 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-height: 0; }
+.cth-pw-blk { display: flex; flex-direction: column; gap: 7px; padding: 10px; border: 1px solid var(--cth-ink-300); border-radius: 8px; }
+.cth-pw-blk i { display: block; height: 7px; border-radius: 4px; background: var(--cth-cream-200); }
+.cth-pw-blk i[data-ln='40'] { width: 40%; }
+.cth-pw-blk i[data-ln='60'] { width: 60%; }
+.cth-pw-blk i[data-ln='70'] { width: 70%; }
+.cth-pw-blk i[data-ln='80'] { width: 80%; }
+.cth-pw-blk i[data-fld] { height: 22px; border-radius: 6px; background: transparent; border: 1px solid var(--cth-ink-300); box-sizing: border-box; }
+.cth-pw-blk i[data-btn] { height: 24px; width: 60%; border-radius: 6px; background: var(--cth-ink-900); opacity: 0.85; }
+/* The Stapler as the app draws it: the face (PuckFace, the app's own), two
+   hairline orbits, the outer one dashed, five buttons each at its own angle,
+   the close control straight below. The sizes and angles are the app's
+   (shared/puck RING, RING_ANGLE), set by the component; the look is the
+   kit's tokens. The anchor is the disc's centre. */
+.cth-pw-stp { position: absolute; left: 62%; top: 50%; width: 0; height: 0; z-index: 7; }
+.cth-pw-disc { position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); }
+.cth-pw-orbit {
+  position: absolute; left: 0; top: 0; border-radius: 50%; box-sizing: border-box; border: 1px solid var(--cth-ink-300);
+  opacity: 0; transform: translate(-50%, -50%) scale(0.3);
+  transition: transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1.15), opacity 140ms ease;
+}
+.cth-pw-orbit[data-dashed] { border-style: dashed; }
+.cth-pw-stp[data-in] .cth-pw-orbit { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* A ring button: it flies out along its own angle, each a beat after the last. */
+.cth-pw-pb {
+  position: absolute; left: 0; top: 0; display: grid; place-items: center; border-radius: 50%; box-sizing: border-box;
+  border: 1px solid var(--cth-ink-300); background: var(--cth-cream-100); color: var(--cth-ink-900); box-shadow: var(--cth-shadow-hard);
+  opacity: 0; transform: translate(-50%, -50%) scale(0.2);
+  transition: transform 180ms cubic-bezier(0.2, 0.9, 0.25, 1.2) calc(var(--i) * 18ms), opacity 120ms ease calc(var(--i) * 18ms), background 120ms;
+}
+.cth-pw-stp[data-in] .cth-pw-pb { opacity: 1; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1); }
+.cth-pw-pb[data-hover] { background: var(--cth-accent-soft); border-color: var(--cth-accent-line); }
+.cth-pw-pb[data-off] { color: var(--cth-ink-500); background: var(--cth-cream-200); }
+.cth-pw-pb[data-close] { background: var(--cth-ink-900); color: var(--cth-cream-50); border-color: var(--cth-ink-900); }
+/* A button's name, shown only while that button is under the pointer. */
+.cth-pw-pl {
+  position: absolute; white-space: nowrap; padding: 2px 7px; font-size: 11px; font-weight: 600; line-height: 1.3;
+  background: var(--cth-cream-100); border: 1px solid var(--cth-ink-300); border-radius: 6px; color: var(--cth-ink-900);
+  opacity: 0; transition: opacity 100ms ease;
+}
+.cth-pw-pl small { font-weight: 500; font-size: 10px; color: var(--cth-ink-500); }
+.cth-pw-pl[data-side='up'] { transform: translate(-50%, -50%); }
+.cth-pw-pl[data-side='right'] { transform: translate(10px, -50%); }
+.cth-pw-pl[data-side='left'] { transform: translate(calc(-100% - 10px), -50%); }
+.cth-pw-pl[data-on] { opacity: 1; }
+/* The cursor, moved by transform from the disc's centre. */
+.cth-pw-cur { position: absolute; left: 0; top: 0; z-index: 9; pointer-events: none; transition: transform 1.1s cubic-bezier(0.4, 0, 0.2, 1); }
+.cth-pw-cur svg { display: block; }
+.cth-pw-cur path { fill: var(--cth-ink-900); stroke: var(--cth-cream-100); stroke-width: 1; }
+
+/* ── the open row's sentence, as a caption under the miniature ────────── */
+/* One line in any language: the column is wide and the sentences are short. */
+.cth-pw-capn { flex: none; display: flex; align-items: center; gap: 10px; min-height: 20px; margin: 0; font-size: 14px; line-height: 20px; color: var(--cth-ink-700); white-space: nowrap; overflow: hidden; }
+.cth-pw-capn > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; animation: cth-pw-capin 0.3s ease 1 both; }
+.cth-pw-capn .cth-pw-new { flex: none; height: 20px; padding: 0 7px; margin: 0; font-size: 11px; }
+@keyframes cth-pw-capin { 0% { opacity: 0; } 100% { opacity: 1; } }
+
+/* ── coming next: one row of stops, in the order they are being built ─── */
+/* No dates and no progress bars: a dashed line of stops, the first one where
+   the person is. The line to the next stop is drawn once, on arrival. */
+.cth-pw-road { flex: none; display: flex; align-items: flex-start; gap: 14px; padding-top: 2px; }
+.cth-pw-rl { flex: none; font: 500 10px/18px var(--cth-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--cth-ink-500); white-space: nowrap; }
+.cth-pw-trail { flex: 1; position: relative; list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); align-items: start; }
+.cth-pw-trail::before { content: ''; position: absolute; inset-inline: 8.33%; top: 9px; border-top: 1px dashed var(--cth-ink-300); }
+.cth-pw-trail::after {
+  content: ''; position: absolute; inset-inline-start: 8.33%; width: 16.67%; top: 9px; border-top: 1px solid var(--cth-accent-text);
+  transform-origin: 0 50%; animation: cth-pw-draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) 0.4s 1 both;
+}
+:root[dir='rtl'] .cth-pw-trail::after { transform-origin: 100% 50%; }
+@keyframes cth-pw-draw { 0% { transform: scaleX(0); } 100% { transform: scaleX(1); } }
+.cth-pw-trail li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; text-align: center; font-size: 11px; color: var(--cth-ink-500); }
+.cth-pw-nd {
+  position: relative; z-index: 1; width: 18px; height: 18px; margin-bottom: 3px; border-radius: 50%; box-sizing: border-box;
+  display: grid; place-items: center; border: 1px dashed var(--cth-ink-300); background: var(--cth-cream-100);
+}
+.cth-pw-trail li[data-at='here'] .cth-pw-nd { border: 1px solid var(--cth-accent); background: var(--cth-accent); color: var(--cth-accent-ink); }
+.cth-pw-trail li[data-at='next'] .cth-pw-nd { border: 1px solid var(--cth-accent-text); background: var(--cth-accent-soft); }
+.cth-pw-trail li[data-at='next'] .cth-pw-nd::after {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--cth-accent-text);
+  animation: cth-pw-pop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) 2s 1 both;
+}
+@keyframes cth-pw-pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+.cth-pw-trail b { max-width: 100%; font-weight: 400; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cth-pw-trail li[data-at] b { font-weight: 500; color: var(--cth-ink-900); }
+.cth-pw-trail em { font-style: normal; font-size: 10px; line-height: 13px; font-weight: 600; color: var(--cth-accent-text); }
+
+/* ── the bottom section: the price on one side; reasons, doors, Get PRO ── */
+.cth-pw-buy { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--cth-ink-100); display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 24px; align-items: center; }
+.cth-pw-price { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.cth-pw-offer {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 8px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600; color: var(--cth-accent-text); background: var(--cth-accent-soft); border: 1px solid var(--cth-accent-line);
+}
+.cth-pw-pulse { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--cth-accent-text); }
+.cth-pw-pulse::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--cth-accent-text);
+  opacity: 0; animation: cth-pw-pulse 2.2s ease-out 3;
+}
+@keyframes cth-pw-pulse { 0% { transform: scale(0.4); opacity: 0.8; } 100% { transform: scale(1.4); opacity: 0; } }
+.cth-pw-amount { display: flex; align-items: baseline; gap: 6px; font-size: 14px; font-weight: 500; color: var(--cth-ink-700); }
+.cth-pw-amount b { font-size: 38px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; color: var(--cth-ink-900); }
+.cth-pw-anchor { font-size: 12.5px; line-height: 18px; color: var(--cth-ink-700); }
+/* The list price, struck: the line is drawn through it once, on arrival. */
+.cth-pw-anchor s { position: relative; text-decoration: none; color: var(--cth-ink-500); }
+/* A drawn line, not a border: a hair heavier and darker than the grey digits
+   it crosses, so it reads against them (Pam, 1 Oct 2026). */
+.cth-pw-anchor s::after {
+  content: ''; position: absolute; inset-inline: -1px; top: 52%; height: 1.5px; background: var(--cth-ink-700);
+  transform-origin: 0 50%; animation: cth-pw-draw 0.5s ease 1.2s 1 both;
+}
+:root[dir='rtl'] .cth-pw-anchor s::after { transform-origin: 100% 50%; }
+.cth-pw-anchor b { font-weight: 600; color: var(--cth-ink-900); }
+/* An amount reads sign first in every language. */
+.cth-pw-amt { unicode-bidi: isolate; direction: ltr; }
+/* While the country's price is being asked (800 ms at most) the block is
+   empty and keeps its size, so nothing beside it moves when the price lands. */
+.cth-pw-price[data-wait] { min-height: 116px; }
+/* Why the price is what it is, under a country's price: one line more than
+   the built in block, so the lines sit a little closer and the section, and
+   with it the card, keeps its height. The line never wraps, and with
+   every one of the nine countries in English it ends inside the column. */
+.cth-pw-price[data-region] { gap: 4px; }
+.cth-pw-parity { margin: 0; font-size: 11px; line-height: 15px; color: var(--cth-ink-500); white-space: nowrap; }
+.cth-pw-act { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* Two rows in every language, the reasons and then the doors, so the
+   section is one height whatever the words' length. */
+.cth-pw-top2 { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.cth-pw-why { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; color: var(--cth-ink-700); }
+.cth-pw-why li { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.cth-pw-why svg { color: var(--cth-status-working); }
+/* The kit's button takes its font from where it sits. */
+/* The two quiet doors share the row: equal halves, edge to edge with the
+   reasons above and Get PRO below. */
+.cth-pw-quiet { align-self: stretch; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; font-size: 12.5px; }
+.cth-pw-fine { margin: 0; text-align: center; font-size: 11.5px; color: var(--cth-ink-500); }
+/* The one wide button's words. The kit's button takes its font from where
+   it sits, so the size is set on the words, not on the button. */
+.cth-pw-go { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; }
+/* A soft shine crosses the wide button three times, then it is still. It is
+   the button's own lighter shade, so it reads in light and in dark. */
+[data-paywall-buy]::after {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 22%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, var(--cth-accent-hover), transparent);
+  transform: translateX(-160%) skewX(-18deg); animation: cth-pw-sheen 1.1s ease 2.2s 3 both;
+}
+@keyframes cth-pw-sheen { 0% { transform: translateX(-160%) skewX(-18deg); } 60%, 100% { transform: translateX(580%) skewX(-18deg); } }
+
+/* ── a narrow window: the halves stack, the desk keeps a height ───────── */
+@media (max-width: 980px) {
+  .cth-pw-body { grid-template-columns: minmax(0, 1fr); }
+  /* Stacked, nothing shares a height: the rows are as tall as they are, the
+     desk has a set height, and the trail is three stops to a row. */
+  .cth-pw-body { height: auto; }
+  .cth-pw-list li { flex: none; }
+  .cth-pw-desk { flex: none; height: 400px; }
+  .cth-pw-capn { white-space: normal; }
+  .cth-pw-road { flex-direction: column; gap: 6px; }
+  .cth-pw-trail { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+  .cth-pw-trail::before, .cth-pw-trail::after { display: none; }
+  .cth-pw-buy { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+}
+
+/* ── reduced motion: nothing moves; the component draws every scene done ── */
+@media (prefers-reduced-motion: reduce) {
+  .cth-pw-body *, .cth-pw-body *::before, .cth-pw-body *::after,
+  .cth-pw-buy *, .cth-pw-buy *::before, .cth-pw-buy *::after { animation: none !important; transition: none !important; }
+  .cth-pw-pulse::after { display: none; }
+}
+/* Halloween decorations of the window (HalloweenLayer.tsx): the bats. The
+   whole layer ignores the mouse, sits under dialogs (z-index 40), and keeps
+   to the top of the window. Every loop is long and mostly quiet: a bat
+   crosses for about four seconds in every twenty six. The web, the spider,
+   the pumpkin and the ghost are in season/seasonCorner.css. */
+
+.cth-hw {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  overflow: hidden;
+}
+
+/* ── bats ─────────────────────────────────────────────────────────────── */
+.cth-hw-bats { position: absolute; inset: 0 0 auto 0; height: 140px; }
+.cth-hw-bat {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-60px, 60px);
+  animation: cth-hw-fly 26s linear infinite;
+  will-change: transform;
+}
+.cth-hw-bat-1 { animation-delay: 3s; }
+.cth-hw-bat-2 { animation-delay: 4.1s; animation-duration: 26s; }
+.cth-hw-bat-2 .cth-pc-bat { transform: scale(0.75); }
+.cth-hw-bat-3 { animation-delay: 15s; animation-duration: 31s; }
+.cth-hw-bat-3 .cth-pc-bat { transform: scale(0.85); }
+@keyframes cth-hw-fly {
+  0%   { transform: translate(-60px, 84px); }
+  4%   { transform: translate(calc(25vw), 46px); }
+  8%   { transform: translate(calc(50vw), 78px); }
+  12%  { transform: translate(calc(75vw), 40px); }
+  16%  { transform: translate(calc(100vw + 60px), 70px); }
+  100% { transform: translate(calc(100vw + 60px), 70px); }
+}
+/* The bat's own boxes (.cth-pc-bat, .cth-pc-bat-wing) are laid out in
+   season/pieces/pieces.css; this file only flies and flaps them. */
+.cth-pc-bat-wing { will-change: transform; }
+/* Wings flap only while their bat is on screen: each keyframe list has the
+   flight's own duration and flaps inside the first 16%, the part of
+   cth-hw-fly where the bat crosses. Off screen the value holds still. */
+.cth-hw-bat-1 .cth-pc-bat-wing { animation: cth-hw-flap26 26s linear 3s infinite; }
+.cth-hw-bat-2 .cth-pc-bat-wing { animation: cth-hw-flap26 26s linear 4.1s infinite; }
+.cth-hw-bat-3 .cth-pc-bat-wing { animation: cth-hw-flap31 31s linear 15s infinite; }
+@keyframes cth-hw-flap26 {
+  0%, 2%, 4%, 6%, 8%, 10%, 12%, 14%, 16%, 100% { transform: scaleY(1); }
+  1%, 3%, 5%, 7%, 9%, 11%, 13%, 15% { transform: scaleY(0.35); }
+}
+@keyframes cth-hw-flap31 {
+  0%, 1.7%, 3.4%, 5.1%, 6.8%, 8.5%, 10.2%, 11.9%, 13.6%, 15.3%, 17%, 100% { transform: scaleY(1); }
+  0.85%, 2.55%, 4.25%, 5.95%, 7.65%, 9.35%, 11.05%, 12.75%, 14.45%, 16.15% { transform: scaleY(0.35); }
+}
+
+/* The window is off screen (season/windowHidden.ts): nothing runs. */
+:root[data-cth-window='hidden'] .cth-hw * { animation-play-state: paused !important; }
+
+/* Reduced motion: nothing flies. */
+@media (prefers-reduced-motion: reduce) {
+  .cth-hw-bats { display: none; }
+}

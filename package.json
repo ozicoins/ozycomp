@@ -1,0 +1,80 @@
+{
+  "name": "ozycomp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first multi-agent harness — CLI coding agents become an office of agents on your machine. Clone of OzyComp architecture.",
+  "main": "src/main/electron-main.js",
+  "author": {
+    "name": "OzyComp",
+    "email": "dev@ozycomp.app"
+  },
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "start": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "test": "node --test test/*.test.js",
+    "build": "electron-builder",
+    "smoke": "OZYC_SMOKE=1 env -u ELECTRON_RUN_AS_NODE electron .",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "playwright": "^1.64.1"
+  },
+  "build": {
+    "appId": "com.ozycomp.app",
+    "productName": "OzyComp",
+    "files": [
+      "src/**",
+      "bin/**",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "hardenedRuntime": true
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "maintainer": "OzyComp <dev@ozycomp.app>"
+    },
+    "extraResources": [
+      {
+        "from": "company",
+        "to": "company"
+      },
+      {
+        "from": "resources/md-slack-reply.cjs",
+        "to": "md-slack-reply.cjs"
+      },
+      {
+        "from": "skills",
+        "to": "skills"
+      }
+    ],
+    "npmRebuild": false
+  },
+  "homepage": "https://ozycomp.app"
+}
