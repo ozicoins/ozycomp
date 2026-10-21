@@ -989,6 +989,13 @@ class HiveManager {
       // smoke seed) never got the 315 archived hires. Top up missing ids only —
       // never overwrite a live or user-edited row.
       this._mergeCompanyRoster?.();
+      // God row predating the roster can carry stale archived:true — fix it.
+      const reg = this.registry();
+      const godId = reg.godId ?? 'god';
+      if (reg.agents[godId] && reg.agents[godId].archived === true) {
+        reg.agents[godId].archived = false;
+        writeJson(this.p(REGISTRY_FILE), { godId, agents: reg.agents });
+      }
     }
     if (!fs.existsSync(this.p(TASKS_FILE))) writeJson(this.p(TASKS_FILE), { tasks: [] });
     if (!fs.existsSync(this.p(BOARD_FILE)))
