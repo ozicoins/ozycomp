@@ -203,6 +203,11 @@ const DEFAULTS = {
   // straight into the workspace on first launch with zero questions asked.
   onboardingComplete: true,
   harnessHome: '~/.ozycomp',
+  // The renderer's shouldAutoOpenHive() requires this too — without it the
+  // first screen is the "şirket yapılandırmasını seç" picker even though the
+  // home above already points at a real hive. A local build opens the last
+  // floor directly.
+  openLastHiveOnLaunch: true,
   recentHives: [],
   registeredRepos: [],
   autoMode: true,
@@ -374,6 +379,11 @@ class ConfigStore {
       // not resurrect the account gate — force it back on, same as the default.
       if (parsed && typeof parsed === 'object' && parsed.onboardingComplete === false) {
         parsed.onboardingComplete = true;
+      }
+      // Same class of saved-false gate: a previous run that stored
+      // openLastHiveOnLaunch:false would keep showing the config picker.
+      if (parsed && typeof parsed === 'object' && parsed.openLastHiveOnLaunch === false) {
+        parsed.openLastHiveOnLaunch = true;
       }
       const cfg = withTranscribe(withResponseStyleDefault(
         normalizeStoredHomes(this._migrateOpus55(this._migrateTemps(

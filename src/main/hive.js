@@ -984,6 +984,11 @@ class HiveManager {
       // (the user's ~/.claude) so the seed is portable across machines.
       const seeded = this._seedCompanyRoster?.();
       if (!seeded) writeJson(this.p(REGISTRY_FILE), { godId: 'god', agents: {} });
+    } else {
+      // Merge-seed: a registry that predates the roster (e.g. the 2-agent
+      // smoke seed) never got the 315 archived hires. Top up missing ids only —
+      // never overwrite a live or user-edited row.
+      this._mergeCompanyRoster?.();
     }
     if (!fs.existsSync(this.p(TASKS_FILE))) writeJson(this.p(TASKS_FILE), { tasks: [] });
     if (!fs.existsSync(this.p(BOARD_FILE)))
@@ -1104,6 +1109,84 @@ class HiveManager {
       return true;
     } catch (e) {
       try { console.error('[hive] company roster seed failed:', e?.message ?? e); } catch {}
+      return false;
+    }
+  }
+
+  /**
+   * Merge missing roster rows into an existing registry. Runs on every boot
+   * when registry.json already exists; only fills ids that are absent, so a
+   * live or user-edited agent is never clobbered and a fresh seed stays a no-op.
+   */
+  _mergeCompanyRoster() {
+    try {
+      const reg = this.registry();
+      const godId = reg.godId ?? 'god';
+      // The god row can carry a stale archived:true from an earlier seed —
+      // the orchestrator is never an archived hire. Repair unconditionally,
+      // before the count check, so a full roster still fixes god.
+      let godRepaired = false;
+      if (reg.agents[godId] && reg.agents[godId].archived === true) {
+        reg.agents[godId].archived = false;
+        godRepaired = true;
+      }
+      const flush = () => writeJson(this.p(REGISTRY_FILE), { godId, agents: reg.agents });
+      const have = Object.keys(reg.agents ?? {}).length;
+      // A healthy roster is already large — skip re-reading the seed file,
+      // but still persist the god repair above.
+      if (have >= 100) {
+        if (godRepaired) flush();
+        return godRepaired;
+      }
+      const candidates = [];
+      const resDir = this.companyResourceDir?.() ?? process.env.OZYC_COMPANY_DIR;
+      if (resDir) candidates.push(path.join(resDir, 'roster.json'));
+      candidates.push(path.join(__dirname, '..', '..', 'company', 'roster.json'));
+      const seedFile = candidates.find(f => fs.existsSync(f));
+      if (!seedFile) {
+        if (godRepaired) flush();
+        return godRepaired;
+      }
+      const companyRoot = path.dirname(seedFile);
+      const claudeHome = path.join(os.homedir(), '.claude');
+      const resolve = s => (typeof s === 'string'
+        ? s.split('{{companyRoot}}').join(companyRoot).split('{{claudeHome}}').join(claudeHome)
+        : s);
+      const seed = JSON.parse(fs.readFileSync(seedFile, 'utf8'));
+      let added = 0;
+      for (const list of [seed.agents, seed.archived]) {
+        if (!Array.isArray(list)) continue;
+        for (const raw of list) {
+          if (!raw || typeof raw !== 'object' || !raw.id) continue;
+          if (reg.agents[raw.id]) continue; // never overwrite an existing row
+          const row = {};
+          for (const [k, v] of Object.entries(raw)) row[k] = resolve(v);
+          row.isGod = raw.isGod === true || raw.id === (seed.agents?.[0]?.id ?? 'god');
+          row.archived = list === seed.archived ? true : raw.archived === true;
+          reg.agents[raw.id] = row;
+          added++;
+          // give the seeded id its dirs so deliver() doesn't early-return
+          const dir = this.agentDir(raw.id);
+          fs.mkdirSync(path.join(dir, 'inbox', '.done'), { recursive: true });
+          fs.mkdirSync(path.join(dir, 'outbox', '.sent'), { recursive: true });
+          const mem = path.join(dir, 'memory.md');
+          if (!fs.existsSync(mem))
+            fs.writeFileSync(mem, `# ${row.name ?? raw.id} — durable memory\n`, 'utf8');
+        }
+      }
+      if (added === 0) {
+        if (godRepaired) flush();
+        return godRepaired;
+      }
+      flush();
+      if (Array.isArray(seed.archived)) {
+        const arc = seed.archived.map(a => (a && typeof a === 'object' ? a.id : null)).filter(Boolean);
+        writeJson(this.p('roster-archive.json'), { ids: arc });
+      }
+      this.appendLog?.({ kind: 'roster-merge', added, total: Object.keys(reg.agents).length });
+      return true;
+    } catch (e) {
+      try { console.error('[hive] company roster merge failed:', e?.message ?? e); } catch {}
       return false;
     }
   }
