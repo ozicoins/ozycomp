@@ -166,7 +166,17 @@ class PtyManager extends EventEmitter {
 
   write(id, data) { return this.get(id)?.write(data) ?? false; }
   resize(id, cols, rows) { this.get(id)?.resize(cols, rows); }
-  kill(id) { const a = this.get(id); if (a) { a.kill(); this.forgetPid(a.pid); this.emit('killed', id); } }
+  kill(id) {
+    const a = this.get(id);
+    if (!a) return;
+    a.kill();
+    this.forgetPid(a.pid);
+    // verbatim ~1392-1404: a killed pty leaves the session map at once — a
+    // re-fired before-quit or quit poll must not count it as live, or the
+    // quit warning re-prompts on a process that is already dying.
+    this.agents.delete(id);
+    this.emit('killed', id);
+  }
   killAll() {
     for (const a of this.agents.values()) {
       a.kill();
@@ -175,6 +185,7 @@ class PtyManager extends EventEmitter {
       try { a.proc?.destroy?.(); } catch {}
       this.forgetPid(a.pid);
     }
+    this.agents.clear();
   }
 
   scrollback(id) { return this.get(id)?.scrollback ?? ''; }

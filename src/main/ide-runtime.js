@@ -22,6 +22,9 @@ let allowQuit = false;
 function setAllowQuit(on) {
   allowQuit = on === true;
 }
+function getAllowQuit() {
+  return allowQuit;
+}
 function dirtyLedger() {
   return ideDirtyByWindow;
 }
@@ -216,7 +219,7 @@ function registerIdeRuntime(e, d) {
 }
 
 module.exports = {
-  registerIdeRuntime, confirmLosingIdeEdits, setAllowQuit,
+  registerIdeRuntime, confirmLosingIdeEdits, setAllowQuit, getAllowQuit,
   dirtyLedger, windows, lossAcceptedAt, clampBounds,
   _reset() {
     electron = null; deps = null; ideWindows = null; ideDirtyByWindow = null;

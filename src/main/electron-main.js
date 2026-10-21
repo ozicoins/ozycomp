@@ -1224,18 +1224,19 @@ app.whenReady().then(async () => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
-app.on('window-all-closed', async () => {
-  try { ideRuntime.setAllowQuit(true); } catch {}
-  try { voice?.stop(); } catch {}
-  try { missionArming?.stop(); } catch {}
-  try { missionScheduler?.clear(); } catch {}
-  try { contextTriggers?.clearTimers(); } catch {}
-  try { webhooks?.stop(); } catch {}
-  try { integrationBroker?.stop(); } catch {}
-  try { await harness?.stop(); } catch {}
-  if (process.platform !== 'darwin') app.quit();
+app.on('window-all-closed', () => {
+  // verbatim ~38015: darwin keeps the app alive on the dock with the harness
+  // running (activate re-creates the window); other platforms run the full
+  // teardown and quit. Stopping the harness here on darwin left a reopened
+  // window bound to dead services.
+  if (process.platform !== 'darwin') _ipcCtx?.teardownAndQuit?.() ?? app.quit();
 });
 app.on('before-quit', (e) => {
+  // verbatim ~37996: a teardown that already armed allowQuit (confirmClose /
+  // resetAll / changeHome / window-all-closed) must not re-prompt — killAll's
+  // graceful SIGTERM is still in flight, so pty.list() would re-report live
+  // agents and the prompt would loop forever.
+  if (ideRuntime.getAllowQuit?.() === true) return;
   // Lose-your-edits gate (verbatim ~37995): teardown paths (changeHome /
   // resetAll / single-instance abort / window-all-closed teardown) flip
   // allowQuit first so they never prompt; a normal quit asks once, with the
