@@ -2015,6 +2015,12 @@
     "source": "Kişisel Claude becerileri",
     "path": "/Users/oguzhan/.claude/skills/redesign-existing-projects"
   },
+  "claude:reverse-engineer-anything": {
+    "name": "reverse-engineer-anything",
+    "description": "Native, yönetilen (.NET), Electron/JavaScript, paketlenmiş uygulama, firmware ve tarayıcı hedeflerini REA ile tersine mühendislikle analiz edin. Özellikleri açıklamak, sürümleri karşılaştırmak, kodu decompile etmek veya yeniden inşaya rehberlik etmek için dağıtılmış artefakt veya çalışma zamanı kanıtlarını kullanın. Sıradan kaynak kodu deposu mimari analizleri için REA'yı atlayın.",
+    "source": "Kişisel Claude becerileri",
+    "path": "/Users/oguzhan/.claude/skills/reverse-engineer-anything"
+  },
   "claude:review-animations": {
     "name": "review-animations",
     "description": "Animasyon ve hareket kodunu, Emil Kowalski'nin tasarım mühendisliği felsefesinden türetilen yüksek bir zanaat çıtasına göre inceler. Varsayılan işaretlemedir; onay kazanılır.",

@@ -39,7 +39,8 @@
         "dmg",
         "zip"
       ],
-      "hardenedRuntime": true
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": [

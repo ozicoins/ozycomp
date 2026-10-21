@@ -745,6 +745,31 @@ function ipc() {
   handle('cth:licenseRedeem', (_e, key) => harness.license.redeem(key));
   handle('cth:licenseTrial', () => harness.license.registerTrial());
 
+  // ── workers tab (pro shell) ──
+  handle('cth:listWorkers', () => {
+    const registry = harness.hive.registry();
+    const getAgentName = (id) => {
+      const agent = registry.agents?.[id];
+      return agent?.name ?? id;
+    };
+    const live = harness.pty.list().filter(a => a.alive).map(a => ({
+      workerId: a.id,
+      name: getAgentName(a.id),
+      baseBranch: 'main', // TODO: get from worktree
+      ageMs: Date.now() - a.spawnedAt,
+      idleMs: a.lastOutputAt ? Date.now() - a.lastOutputAt : null,
+      tokensUsed: 0, // TODO: get from breaker
+      tokenCap: null, // TODO: get from breaker
+      hasSlack: false, // TODO: get from slack
+      releasing: false,
+    }));
+    return { live, preserved: [], maxWorkers: 4 };
+  });
+  handle('cth:stopWorker', async (_e, workerId) => {
+    harness.pty.kill(workerId);
+    return { ok: true };
+  });
+
   // ── voice (dictation / meeting transcription) ──
   handle('cth:voiceStatus', () => voice.status());
   handle('cth:voiceModels', () => DOWNLOADABLE_MODELS.map(m => ({ ...m, installed: voice.modelInstalledSync(m.id) })));
@@ -803,6 +828,13 @@ function ipc() {
     writeSettings({ registeredRepos: skillsHub.normalizeRegisteredRepos(repos) });
     return readSettings().registeredRepos;
   });
+
+  // ── hive registry ──
+  handle('cth:hiveRegistry', () => {
+    return harness.hive.registry();
+  });
+
+  // ── roster ──
   handle('cth:commandGroups', (_e, provider) => commandGroupsFor(provider));
 
   // ── tools:status + models:catalog (verbatim surfaces) ──

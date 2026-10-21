@@ -44,6 +44,55 @@ const { CostLedgerTotals } = require('./cost-ledger-totals');
 
 const GOD_ID = 'god';
 
+/**
+ * Check if a command is available on PATH.
+ */
+function isCommandAvailable(command) {
+  try {
+    const result = spawnSync(
+      process.platform === 'win32' ? 'where' : 'which',
+      [command],
+      { encoding: 'utf8', timeout: 3000 }
+    );
+    return result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Auto-install devin CLI if missing.
+ */
+async function ensureDevinCli() {
+  if (isCommandAvailable('devin')) return true;
+
+  console.log('[devin] CLI not found, auto-installing...');
+  try {
+    const installCmd = process.platform === 'win32'
+      ? 'powershell -c irm https://cli.devin.ai/install.ps1 | iex'
+      : 'curl -fsSL https://cli.devin.ai/install.sh | bash';
+
+    const result = spawnSync(installCmd, {
+      shell: true,
+      stdio: 'inherit',
+      timeout: 120000, // 2 minutes
+    });
+
+    if (result.status === 0) {
+      console.log('[devin] CLI installed successfully');
+      // Wait a moment for PATH to update
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return isCommandAvailable('devin');
+    } else {
+      console.error('[devin] CLI install failed:', result.stderr);
+      return false;
+    }
+  } catch (e) {
+    console.error('[devin] CLI install error:', e);
+    return false;
+  }
+}
+
 const GOD_PROMPT = `You are the god/coordinator agent of an agentic office.
 You own the hive at the working directory's ./hive folder:
   - hive/tasks.json    kanban (todo|doing|blocked|done)
@@ -427,6 +476,11 @@ class Harness extends EventEmitter {
     const provider = opts.provider ? providerFor(opts.provider)
       : opts.command ? providerFor(providerFromCommand(opts.command))
       : providerFor(this.defaultProvider);
+
+    // Auto-install devin CLI if needed
+    if (provider.id === 'devin') {
+      await ensureDevinCli();
+    }
 
     // isolate → own git worktree under workspaces/<id>-wt (when in a repo)
     let cwd = opts.cwd ?? path.join(this.workDir, 'workspaces', id);

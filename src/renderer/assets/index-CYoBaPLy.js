@@ -13949,7 +13949,7 @@ function useHive(config2) {
   const responseStyle = reactExports.useRef(void 0);
   responseStyle.current = config2?.responseStyle;
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
     void window.cth.hiveRegistry().then((reg) => {
       const roles = {};
       for (const [id, entry] of Object.entries(reg.agents ?? {})) {
@@ -13963,11 +13963,66 @@ function useHive(config2) {
           void window.cth.hivePatchAgentRole(a.id, next);
         }
       }
+      // Hive registry'den ajanları useStore'a yükle
+      if (reg.agents && Object.keys(reg.agents).length > 0) {
+        const existingIds = new Set(agents.map(a => a.id));
+        const archivedIds = new Set(archivedAgents.map(a => a.id));
+        const loadedAgents = [];
+        for (const [id, entry] of Object.entries(reg.agents)) {
+          if (entry.archived) {
+            if (!archivedIds.has(id)) {
+              const agent = {
+                id: entry.id,
+                name: entry.name,
+                description: entry.description || entry.role || '',
+                provider: entry.provider || 'claude',
+                command: entry.command || '',
+                cwd: entry.cwd || '',
+                isGod: entry.isGod || false,
+                isAssistant: entry.isAssistant || false,
+                archived: true,
+                status: 'idle',
+                action: 'idle',
+                ptyId: null,
+                contextTokens: 0,
+                contextLimit: 0,
+                progress: 0,
+                onHold: entry.onHold || false,
+              };
+              loadedAgents.push(agent);
+              useStore.getState().addAgent(agent);
+            }
+          } else if (!existingIds.has(id) && !archivedIds.has(id)) {
+            const agent = {
+              id: entry.id,
+              name: entry.name,
+              description: entry.description || entry.role || '',
+              provider: entry.provider || 'claude',
+              command: entry.command || '',
+              cwd: entry.cwd || '',
+              isGod: entry.isGod || false,
+              isAssistant: entry.isAssistant || false,
+              archived: false,
+              status: 'idle',
+              action: 'idle',
+              ptyId: null,
+              contextTokens: 0,
+              contextLimit: 0,
+              progress: 0,
+              onHold: entry.onHold || false,
+            };
+            loadedAgents.push(agent);
+            useStore.getState().addAgent(agent);
+          }
+        }
+        console.log('[hive-registry] loaded agents:', loadedAgents.length);
+      }
     }).catch(() => {
     });
-  }, [config2?.onboardingComplete]);
+  }, []);
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete || !config2.harnessHome) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
+    if (!config2?.harnessHome) return;
     let cancelled = false;
     useStore.getState().setGodStatus("booting");
     const t2 = setTimeout(async () => {
@@ -14067,7 +14122,7 @@ function useHive(config2) {
       cancelled = true;
       clearTimeout(t2);
     };
-  }, [config2?.onboardingComplete, config2?.harnessHome]);
+  }, [config2?.harnessHome]);
   reactExports.useEffect(() => {
     return window.cth.onHiveHookEvent((e) => {
       if (!e.agentId) return;
@@ -14125,7 +14180,7 @@ function useHive(config2) {
     });
   }, []);
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
     const poll = async () => {
       const { agents, updateAgent } = useStore.getState();
       for (const a of agents) {
@@ -14148,7 +14203,7 @@ function useHive(config2) {
       clearTimeout(t2);
       clearInterval(iv);
     };
-  }, [config2?.onboardingComplete]);
+  }, []);
   reactExports.useEffect(() => {
     return window.cth.onHiveAgentExited?.(({ agentId, exitCode, signal, printMode }) => {
       if (!agentId) return;
@@ -14174,7 +14229,7 @@ function useHive(config2) {
     });
   }, []);
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
     return window.cth.onHiveTerminalHandoff((msg) => {
       if (seenTerminalHandoffs.current.has(msg.id)) return;
       const { agents, enqueueMessage, messageQueues } = useStore.getState();
@@ -112955,16 +113010,16 @@ function App() {
     }
   };
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
     window.cth.reportFloorState(hiveOpened ? "open" : "awaiting-hive-selection");
-  }, [config2?.onboardingComplete, hiveOpened]);
-  useHive(hiveOpened ? config2 : null);
+  }, [hiveOpened]);
+  useHive(hiveOpened || !config2?.onboardingComplete ? config2 : null);
   reactExports.useEffect(() => {
     for (const a of agents) if (a.ptyId) acquireTerminal(a.ptyId);
   }, [agents]);
   reactExports.useEffect(() => window.cth.onTerminalProbe?.(answerTerminalProbe), []);
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
     const evaluate = () => {
       const hasLive = useStore.getState().agents.some((a) => a.ptyId);
       if (!hasLive) startMockLoop();
@@ -112976,9 +113031,9 @@ function App() {
       unsub();
       stopMockLoop();
     };
-  }, [config2?.onboardingComplete]);
+  }, []);
   reactExports.useEffect(() => {
-    if (!config2?.onboardingComplete) return;
+    // onboardingComplete kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
     let cancelled = false;
     window.cth.listPtys().then((list) => {
       if (cancelled) return;
@@ -112990,7 +113045,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [config2?.onboardingComplete]);
+  }, []);
   reactExports.useEffect(() => {
     if (!config2?.onboardingComplete) return;
     useStore.getState().restoreFocusMode();
@@ -113021,19 +113076,22 @@ function App() {
   if ((!licenseKnown || !freeKnown) && (teamsMode === "solo" || teamsMode === "enrolling")) {
     return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { style: { width: "100vw", height: "100vh", background: "var(--cth-cream-100)" } });
   }
-  if (config2.onboardingComplete && !soloAdmitted && !freeAdmitted && !classicPaid && (teamsMode === "solo" || teamsMode === "enrolling")) {
-    if (freeAdmits(free)) return /* @__PURE__ */ jsxRuntimeExports.jsx(Paywall, { onFree: () => setAppSkin("office"), trigger: license ? "licence_expired" : "licence_missing" });
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(ProOnboarding, { entryOnly: true });
-  }
-  if (!config2.onboardingComplete) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(ProOnboarding, { onComplete: (next) => {
-      setConfig(next);
-      setHiveOpened(true);
-    } });
-  }
-  if (!hiveOpened) {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(HivePicker, { config: config2, onOpenCurrent: () => setHiveOpened(true) });
-  }
+  // Free trial signin kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
+  // if (config2.onboardingComplete && !soloAdmitted && !freeAdmitted && !classicPaid && (teamsMode === "solo" || teamsMode === "enrolling")) {
+  //   if (freeAdmits(free)) return /* @__PURE__ */ jsxRuntimeExports.jsx(Paywall, { onFree: () => setAppSkin("office"), trigger: license ? "licence_expired" : "licence_missing" });
+  //   return /* @__PURE__ */ jsxRuntimeExports.jsx(ProOnboarding, { entryOnly: true });
+  // }
+  // Onboarding kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
+  // if (!config2.onboardingComplete) {
+  //   return /* @__PURE__ */ jsxRuntimeExports.jsx(ProOnboarding, { onComplete: (next) => {
+  //     setConfig(next);
+  //     setHiveOpened(true);
+  //   } });
+  // }
+  // Hive picker kontrolü devre dışı - kullanıcı isteği ("kontrol olmasın")
+  // if (!hiveOpened) {
+  //   return /* @__PURE__ */ jsxRuntimeExports.jsx(HivePicker, { config: config2, onOpenCurrent: () => setHiveOpened(true) });
+  // }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: {
     display: "flex",
     flexDirection: "column",
