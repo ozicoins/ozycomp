@@ -788,7 +788,14 @@ function nonInteractiveEnvForProvider(provider) {
 }
 function argsWithAutoModeFlag(args, autoMode, provider) {
   const p = providerPreset(provider);
-  if (autoMode && p.autoModeFlag && !args.includes(p.autoModeFlag)) return [...args, p.autoModeFlag];
+  // autoModeFlag may carry a value ("--permission-mode bypassPermissions") —
+  // it must be split into separate argv tokens, else claude exits 1 with
+  // "unknown option '--permission-mode bypassPermissions'". Mirror the
+  // splitFlags() handling providers.buildLaunch already uses for autoFlag.
+  if (autoMode && p.autoModeFlag) {
+    const tokens = String(p.autoModeFlag).trim().split(/\s+/).filter(Boolean);
+    if (tokens.length && !tokens.every((t) => args.includes(t))) return [...args, ...tokens];
+  }
   return args;
 }
 function modelForRole(meta, config) {

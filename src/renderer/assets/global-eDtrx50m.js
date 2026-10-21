@@ -1726,22 +1726,19 @@ function portraitBoxFor(size2, frameW, frameH) {
 const LS_KEY$2 = "cth.skin";
 const LS_DEFAULT_KEY = "cth.skin.default";
 function loadDefault() {
-  try {
-    const v2 = window.localStorage.getItem(LS_DEFAULT_KEY);
-    if (v2 === "office" || v2 === "professional") return v2;
-  } catch {
-  }
+  // OzyComp local build: no stored default wins — the office floor is always
+  // the surface, a remembered "professional" is rewritten to "office" below.
   return null;
 }
 function load$2() {
-  const preset = loadDefault();
-  if (preset) return preset;
+  // OzyComp local build: the office floor is the only surface — ignore any
+  // stored "professional" (from the reference's paid tier) and pin "office".
   try {
     const v2 = window.localStorage.getItem(LS_KEY$2);
-    if (v2 === "office" || v2 === "professional") return v2;
+    if (v2 !== "office") window.localStorage.setItem(LS_KEY$2, "office");
   } catch {
   }
-  return "professional";
+  return "office";
 }
 let skin = load$2();
 let defaultSkin = loadDefault();
@@ -1768,18 +1765,22 @@ function appSkin() {
   return skin;
 }
 function setAppSkin(next) {
-  if (next === skin) return;
-  skin = next;
+  // OzyComp local build: the office floor is the only surface — attempts to
+  // switch to the reference's "professional" pro shell are pinned to "office".
+  const fixed = next === "professional" ? "office" : next;
+  if (fixed === skin) return;
+  skin = fixed;
   try {
-    window.localStorage.setItem(LS_KEY$2, next);
+    window.localStorage.setItem(LS_KEY$2, fixed);
   } catch {
   }
   apply$3();
   subscribers$2.forEach((fn) => fn());
 }
 function adoptAppSkin(next) {
-  if (next === skin) return;
-  skin = next;
+  const fixed = next === "professional" ? "office" : next;
+  if (fixed === skin) return;
+  skin = fixed;
   apply$3();
   subscribers$2.forEach((fn) => fn());
 }
