@@ -227,7 +227,7 @@ const DEFAULTS = {
   integrations: [],
   defaultWorkerTokenCap: 0,          // 0 = unlimited (no per-worker cap)
   semanticMemory: true,
-  embeddingModel: 'minilm',
+  embeddingModel: 'embeddinggemma',
   missions: [OPS_STANDUP_MISSION],
   notifications: false,
   strongKeepalive: false,
