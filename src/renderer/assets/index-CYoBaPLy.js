@@ -843,6 +843,29 @@ const AGENT_PROVIDER_PRESETS = [
     docsUrl: "https://cursor.com/docs/cli/install"
   },
   {
+    // Devin — Cognition AI's coding agent CLI (devin.ai). Terminal-first,
+    // interactive TUI by default. Non-hiveAware; protocol rides in via -i.
+    // Auto-approve via --dangerously-skip-permissions (matches Claude's bypassPermissions).
+    id: "devin",
+    label: "Devin",
+    defaultCommand: "devin",
+    commandGroups: [],
+    autoModeFlag: "--dangerously-skip-permissions",
+    autoFlag: "--dangerously-skip-permissions",
+    supportsModel: true,
+    modelFlag: "--model",
+    hiveAware: false,
+    initialPromptFlag: "-i",
+    canReceiveInbox: true,
+    resumeFlag: "--resume",
+    installCommand: "uv tool install devin || pipx install devin",
+    nativeInstallCommand: {
+      posix: "curl -fsSL https://cli.devin.ai/install.sh | bash",
+      win32: "powershell -c irm https://cli.devin.ai/install.ps1 | iex"
+    },
+    docsUrl: "https://docs.devin.ai/cli"
+  },
+  {
     id: "custom",
     label: "Custom",
     defaultCommand: "",
@@ -856,7 +879,7 @@ const AGENT_PROVIDER_PRESETS = [
   }
 ];
 function isAgentProvider(value) {
-  return value === "claude" || value === "codex" || value === "grok" || value === "kimi" || value === "gemini" || value === "antigravity" || value === "qwen" || value === "opencode" || value === "crush" || value === "pi" || value === "copilot" || value === "cursor" || value === "custom";
+  return value === "claude" || value === "codex" || value === "grok" || value === "kimi" || value === "gemini" || value === "antigravity" || value === "qwen" || value === "opencode" || value === "crush" || value === "pi" || value === "copilot" || value === "cursor" || value === "devin" || value === "custom";
 }
 function normalizeAgentProvider(value) {
   return isAgentProvider(value) ? value : void 0;
@@ -81375,7 +81398,7 @@ function realtimeActionTools() {
       parameters: {
         type: "object",
         properties: {
-          provider: { type: "string", description: "Engine: claude (default), codex, gemini, opencode, crush, pi, qwen, copilot, cursor." },
+          provider: { type: "string", description: "Engine: claude (default), codex, gemini, opencode, crush, pi, qwen, copilot, cursor, devin." },
           role: { type: "string", description: "Optional. The role/job for the new agent." },
           name: { type: "string", description: "Optional. A name for the agent." },
           cwd: { type: "string", description: "Optional. Working directory; defaults to the hive root." }
