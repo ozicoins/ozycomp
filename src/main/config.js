@@ -198,8 +198,11 @@ const SEEDED_COMPACT_TRIGGERS = [
 const { DEFAULT_WEBHOOK_SCHEMA, DEFAULT_TRIGGER_MODE } = require('./webhooks');
 
 const DEFAULTS = {
-  onboardingComplete: false,
-  harnessHome: null,
+  // Local build: there is no account/licence step to complete, so onboarding
+  // is born finished and the hive home defaults to ~/.ozycomp — the app opens
+  // straight into the workspace on first launch with zero questions asked.
+  onboardingComplete: true,
+  harnessHome: '~/.ozycomp',
   recentHives: [],
   registeredRepos: [],
   autoMode: true,
@@ -367,6 +370,11 @@ class ConfigStore {
     try {
       const raw = fs.readFileSync(p, 'utf8');
       const parsed = JSON.parse(raw);
+      // Local build: a saved onboardingComplete:false from a previous run must
+      // not resurrect the account gate — force it back on, same as the default.
+      if (parsed && typeof parsed === 'object' && parsed.onboardingComplete === false) {
+        parsed.onboardingComplete = true;
+      }
       const cfg = withTranscribe(withResponseStyleDefault(
         normalizeStoredHomes(this._migrateOpus55(this._migrateTemps(
           this._migrateTriggers(withTriggerDefaults({ ...DEFAULTS, ...parsed })))))
